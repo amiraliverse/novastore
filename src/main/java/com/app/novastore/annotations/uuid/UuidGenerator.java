@@ -7,7 +7,7 @@ import java.util.UUID;
 
 public class UuidGenerator implements IdentifierGenerator {
     @Override
-    public Object generate(SharedSessionContractImplementor session, Object object) {
+    public Object generate(SharedSessionContractImplementor sharedSessionContractImplementor, Object o) {
         return UUID.randomUUID().toString().replaceAll("-", "");
     }
 }

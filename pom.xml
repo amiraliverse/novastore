@@ -17,34 +17,21 @@
 
     <properties>
         <java.version>21</java.version>
-        <spring-boot.version>3.3.12</spring-boot.version>
 
-        <!-- Hibernate modules are NOT pinned here: spring-boot-starter-parent
-             manages them (6.5.3.Final for Boot 3.3.12). Pinning them separately
-             is how hibernate-core and hibernate-spatial drift out of sync. -->
-
-        <!-- 2.7+ compiles against Spring Framework 6.2 (LiteWebJarsResourceResolver) and
-             blows up on context refresh under Boot 3.3, which ships Spring 6.1.
-             2.6.x is the line that targets Boot 3.3. Bump only alongside Boot. -->
-        <springdoc-openapi.version>2.6.0</springdoc-openapi.version>
+        <!-- Hibernate, Testcontainers, Flyway, Lombok, Jackson and the git-commit-id plugin
+             are all managed by the Boot parent. Do not pin them here. -->
+        <springdoc-openapi.version>3.1.1</springdoc-openapi.version>
         <mapstruct.version>1.6.3</mapstruct.version>
         <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
-        <!-- 0.12.x renames the parser API; see notes before bumping -->
-        <jjwt.version>0.11.5</jjwt.version>
-        <logbook.version>3.12.1</logbook.version>
-        <!-- Pinned to what hibernate-spatial 6.5.x ships. A higher value here
-             loses to the transitive copy and silently does nothing. -->
-        <jts.version>1.18.2</jts.version>
-        <minio.version>8.5.17</minio.version>
+        <jjwt.version>0.13.0</jjwt.version>
+        <logbook.version>4.2.0</logbook.version>
+        <minio.version>9.0.3</minio.version>
+        <okhttp-jvm.version>5.3.2</okhttp-jvm.version>
         <webp-imageio.version>0.1.6</webp-imageio.version>
         <UserAgentUtils.version>1.21</UserAgentUtils.version>
-        <statemachine.version>4.0.0</statemachine.version>
-        <hypersistence-utils.version>3.9.11</hypersistence-utils.version>
+        <hypersistence-tsid.version>2.1.4</hypersistence-tsid.version>
         <persian-date-time.version>4.2.1</persian-date-time.version>
-        <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
-        <!-- Overrides the version Boot 3.3 manages (1.19.8). Its bundled docker-java
-             negotiates Docker API 1.32, which daemons from Docker 25 on reject. -->
-        <testcontainers.version>1.21.3</testcontainers.version>
+        <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
     </properties>
 
     <dependencies>
@@ -72,10 +59,16 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
-        <!-- Spring Boot Starter for building web applications (includes Spring MVC + embedded Tomcat) -->
+        <!-- Spring MVC + embedded Tomcat (Boot 4 name for the old starter-web) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
+        </dependency>
+
+        <!-- RestClient.Builder auto-configuration (pricing hub client) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-restclient</artifactId>
         </dependency>
 
         <!-- Spring Boot Starter Test for making test classes-->
@@ -86,29 +79,28 @@
         </dependency>
 
         <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-test</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-test</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!-- Testcontainers: integration tests run against real Postgres and Redis.
-             Versions come from the Testcontainers BOM that spring-boot-starter-parent imports. -->
+        <!-- Testcontainers 2.x (Boot 4 managed): integration tests run against real Postgres and Redis. -->
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>junit-jupiter</artifactId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>postgresql</artifactId>
+            <artifactId>testcontainers-postgresql</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!-- Flyway Core for Database Migrations -->
+        <!-- Flyway: Boot 4 only auto-configures it through this starter (flyway-core alone is inert) -->
         <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-core</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
         </dependency>
 
         <!-- Flyway Database Support for PostgreSQL -->
@@ -160,7 +152,7 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- JJWT Jackson for parsing and serializing JWTs using Jackson library (if you're using Jackson for JSON binding) -->
+        <!-- JJWT Jackson (Jackson 2 based; only used inside jjwt, the app itself runs on Jackson 3) -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
@@ -168,11 +160,11 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Hypersistence Utils for random number generation for testing and other utility functions in Hibernate -->
+        <!-- TSID generator. The only hypersistence piece the code uses; the -63 utils module targets Hibernate 6. -->
         <dependency>
             <groupId>io.hypersistence</groupId>
-            <artifactId>hypersistence-utils-hibernate-63</artifactId>
-            <version>${hypersistence-utils.version}</version>
+            <artifactId>hypersistence-tsid</artifactId>
+            <version>${hypersistence-tsid.version}</version>
         </dependency>
 
         <!-- Jalali calendar: order codes, monthly trade limit windows and market holidays -->
@@ -193,6 +185,13 @@
         <dependency>
             <groupId>org.hibernate.orm</groupId>
             <artifactId>hibernate-envers</artifactId>
+        </dependency>
+
+        <!-- minio 9 needs okhttp 5 as its JVM artifact; okhttp:5.x itself is an empty Gradle redirect stub in Maven -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp-jvm</artifactId>
+            <version>${okhttp-jvm.version}</version>
         </dependency>
 
         <!-- minio -->
@@ -256,13 +255,6 @@
                         <include>**/*Tests.java</include>
                         <include>**/*IT.java</include>
                     </includes>
-                    <systemPropertyVariables>
-                        <!-- Testcontainers falls back to Docker API 1.32 whenever docker-java
-                             reports an unknown version, and daemons from Docker 25 on reject
-                             1.32 outright. 1.43 (Docker 24) is the oldest version that clears
-                             current minimums and is understood by anything newer. -->
-                        <api.version>1.43</api.version>
-                    </systemPropertyVariables>
                 </configuration>
             </plugin>
             <plugin>
@@ -294,19 +286,17 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>${maven-compiler-plugin.version}</version>
                 <configuration>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.springframework.boot</groupId>
                             <artifactId>spring-boot-configuration-processor</artifactId>
-                            <version>${spring-boot.version}</version>
+                            <version>${project.parent.version}</version>
                         </path>
                         <path>
                             <groupId>org.hibernate.orm</groupId>
                             <artifactId>hibernate-jpamodelgen</artifactId>
-                            <!-- hibernate.version comes from spring-boot-dependencies,
-                                 so the processor always matches hibernate-core -->
+                            <!-- hibernate.version is managed by Boot, so it always matches hibernate-core -->
                             <version>${hibernate.version}</version>
                         </path>
                         <path>
@@ -330,17 +320,16 @@
             <plugin>
                 <groupId>com.google.cloud.tools</groupId>
                 <artifactId>jib-maven-plugin</artifactId>
-                <version>3.4.2</version>
+                <version>3.5.2</version>
                 <configuration>
                     <container>
-                        <mainClass>com.bluebyte.goldstar.GoldstarApplication</mainClass>
+                        <mainClass>com.app.novastore.NovastoreApplication</mainClass>
                     </container>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>io.github.git-commit-id</groupId>
                 <artifactId>git-commit-id-maven-plugin</artifactId>
-                <version>6.0.0</version>
                 <executions>
                     <execution>
                         <goals>
